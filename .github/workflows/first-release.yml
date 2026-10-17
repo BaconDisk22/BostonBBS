@@ -21,14 +21,14 @@ jobs:
           python-version: '3.11'
       - name: Validate source
         run: |
-          python -m compileall -q boston_desktop.py boston_personality.py boston_commands.py
+          python -m compileall -q boston_live_desktop.py server.py config_init.py message_processing.py command_handlers.py db_operations.py js8call_integration.py boston_personality.py boston_commands.py
           python -m unittest discover -v
       - name: Install packager
-        run: python -m pip install pyinstaller
+        run: python -m pip install -r requirements.txt pyserial pyinstaller
       - name: Build Intel macOS application
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --name BostonBBS --target-arch x86_64 boston_desktop.py
-          test -d dist/BostonBBS.app
+          python -m PyInstaller --noconfirm --clean --windowed --name BostonBBS --target-arch x86_64 --add-data 'server.py:.' --add-data 'example_config.ini:.' --hidden-import server --collect-submodules meshtastic --collect-submodules pubsub --collect-submodules serial boston_live_desktop.py
+          test -d dist/BostonBBS.app\n          test -f dist/BostonBBS.app/Contents/Resources/example_config.ini || find dist/BostonBBS.app -name example_config.ini
           file dist/BostonBBS.app/Contents/MacOS/BostonBBS
       - name: Create DMG
         run: |
