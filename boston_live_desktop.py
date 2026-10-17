@@ -103,7 +103,7 @@ class BostonApp:
                 f"Review your radio settings in {config} before starting the BBS.")
             return
         try:
-            self.process = subprocess.Popen([sys.executable, "-u", str(server), "--config", str(config)],
+            command = ([sys.executable, "--bbs-server", "--config", str(config)]\n                       if getattr(sys, "frozen", False) else\n                       [sys.executable, "-u", str(server), "--config", str(config)])\n            self.process = subprocess.Popen(command,
                 cwd=str(DATA), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, bufsize=1)
         except OSError as exc:
