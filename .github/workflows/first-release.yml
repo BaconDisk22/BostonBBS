@@ -1,0 +1,53 @@
+name: BostonBBS Intel Mac Release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        default: 'v0.1.0-alpha.1'
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate source
+        run: |
+          python -m compileall -q boston_desktop.py boston_personality.py boston_commands.py
+          python -m unittest discover -v
+      - name: Install packager
+        run: python -m pip install pyinstaller
+      - name: Build Intel macOS application
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --name BostonBBS --target-arch x86_64 boston_desktop.py
+          test -d dist/BostonBBS.app
+          file dist/BostonBBS.app/Contents/MacOS/BostonBBS
+      - name: Create DMG
+        run: |
+          mkdir -p release-stage
+          ditto dist/BostonBBS.app release-stage/BostonBBS.app
+          ln -s /Applications release-stage/Applications
+          hdiutil create -volname 'BostonBBS Alpha' -srcfolder release-stage -ov -format UDZO "BostonBBS-Intel-Mac-${{ github.event.inputs.tag || github.ref_name }}.dmg"
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BostonBBS-Intel-Mac
+          path: BostonBBS-Intel-Mac-*.dmg
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          case "$TAG" in
+            v[0-9]* ) ;;
+            * ) echo 'Tag must start with v and a digit'; exit 1 ;;
+          esac
+          gh release create "$TAG" BostonBBS-Intel-Mac-*.dmg --target "$GITHUB_SHA" --title "BostonBBS $TAG — Intel Mac Alpha" --prerelease --notes "Boston-themed desktop preview with opt-in personality controls. Demo mode only: no radio connection or transmission. Unsigned and unnotarized Intel macOS build. Real BBS/radio integration remains under validation."
